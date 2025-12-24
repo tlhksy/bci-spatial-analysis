@@ -1,5 +1,3 @@
-# bci-spatial-analysis
-Scale-Dependent Spatial Order in Tropical Forests
 # Scale-Dependent Spatial Order in Tropical Forests
 
 [![DOI](https://img.shields.io/badge/DOI-10.xxxx/xxxxx-blue)](https://doi.org/10.xxxx/xxxxx)
@@ -32,10 +30,13 @@ These findings provide quantifiable biomimetic benchmarks for urban forestry pla
 ## Repository Structure
 
 ```
-├── fig1_temporal_evolution.py    # Figure 1: 40-year temporal analysis
-├── fig2_dual_regime.py           # Figure 2: Three-species comparison
+bci-spatial-analysis/
 ├── README.md                     # This file
 ├── requirements.txt              # Python dependencies
+├── prepare_data.py               # Data preparation script
+├── fig1_temporal_evolution.py    # Figure 1: 40-year temporal analysis
+├── fig2_dual_regime.py           # Figure 2: Three-species comparison
+├── BCI_3species.tsv              # Pre-filtered data (3 species)
 └── figures/
     ├── fig1_temporal_evolution.png
     └── fig2_dual_regime.png
@@ -45,7 +46,7 @@ These findings provide quantifiable biomimetic benchmarks for urban forestry pla
 
 ```bash
 # Clone repository
-git clone https://github.com/[your-username]/bci-spatial-analysis.git
+git clone https://github.com/tlhksy/bci-spatial-analysis.git
 cd bci-spatial-analysis
 
 # Install dependencies
@@ -63,28 +64,26 @@ matplotlib>=3.4.0
 
 ## Data
 
-The analysis uses the BCI 50-ha plot census data from ForestGEO:
+### Option 1: Use Pre-filtered Data (Recommended)
+The filtered dataset `BCI_3species.tsv` (4.1 MB) containing only the three focal species is included in this repository. You can start analysis immediately.
 
+### Option 2: Prepare from Full Dataset
+If you want to start from the original data:
+
+1. Download from ForestGEO: [FullMeasurementBCI.zip](https://datadryad.org/dataset/doi:10.15146/5xcp-0d46) (33.7 MB)
+2. Extract `FullMeasurementBCI.tsv` to this folder
+3. Run the preparation script:
+
+```bash
+python prepare_data.py
+```
+
+This will create `BCI_3species.tsv` with the three target species.
+
+### Data Citation
 > Condit R., Perez, R., Aguilar, S., Lao, S., Foster, R., Hubbell, S.P. (2019). 
 > Complete data from the Barro Colorado 50-ha plot: 423617 trees, 35 years.
 > Dryad. https://doi.org/10.15146/5xcp-0d46
-
-**Download:** [FullMeasurementBCI.zip](https://datadryad.org/dataset/doi:10.15146/5xcp-0d46) (33.7 MB)
-
-### Data Preparation
-
-Extract species of interest from the full dataset:
-
-```python
-import pandas as pd
-
-df = pd.read_csv("FullMeasurementBCI.tsv", sep='\t', low_memory=False)
-
-# Filter target species
-species = ['concinna', 'sebifera', 'superba']
-filtered = df[df['SpeciesName'].isin(species)]
-filtered.to_csv("BCI_3species.tsv", sep='\t', index=False)
-```
 
 ## Usage
 
