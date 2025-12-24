@@ -158,17 +158,7 @@ Based on our findings, we propose:
 
 ## Citation
 
-If you use this code or methodology, please cite:
-
-```bibtex
-@article{aksoy2025spatial,
-  title={Scale-Dependent Spatial Order in a Tropical Forest: A Dual-Regime Framework with Implications for Urban Planting Design},
-  author={Aksoy, Talha},
-  journal={Urban Forestry \& Urban Greening},
-  year={2025},
-  doi={10.xxxx/xxxxx}
-}
-```
+If you use this code or methodology, please cite.
 
 ## License
 
