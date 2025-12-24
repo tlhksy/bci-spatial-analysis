@@ -8,7 +8,7 @@ with contrasting ecological strategies:
 - Gustavia superba (clustered/habitat specialist)
 
 Author: Talha Aksoy
-Repository: https://github.com/[your-username]/bci-spatial-analysis
+Repository: https://github.com/tlhksy/bci-spatial-analysis
 Data Source: ForestGEO (https://doi.org/10.15146/5xcp-0d46)
 """
 
