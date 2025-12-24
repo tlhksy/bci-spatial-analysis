@@ -249,11 +249,33 @@ def print_summary_table(species_data):
 # =============================================================================
 
 if __name__ == "__main__":
-    # Data file path
-    DATA_FILE = "BCI_3species.tsv"  # Should contain concinna, sebifera, superba
+    import os
+    
+    # Data file options (in order of preference)
+    DATA_FILES = [
+        "BCI_3species.tsv",           # Filtered data (recommended)
+        "FullMeasurementBCI.tsv",     # Full dataset
+    ]
+    
+    # Find available data file
+    DATA_FILE = None
+    for f in DATA_FILES:
+        if os.path.exists(f):
+            DATA_FILE = f
+            break
+    
+    if DATA_FILE is None:
+        print("ERROR: Data file not found!")
+        print("\nPlease ensure one of these files is in the current directory:")
+        print("  1. BCI_3species.tsv (filtered, ~3 MB)")
+        print("  2. FullMeasurementBCI.tsv (full dataset, ~300 MB)")
+        print("\nDownload from: https://doi.org/10.15146/5xcp-0d46")
+        print("Or get filtered data from: https://github.com/tlhksy/bci-spatial-analysis")
+        exit(1)
     
     print("=" * 60)
     print("Figure 2: Dual-Regime Spatial Analysis")
+    print(f"Data file: {DATA_FILE}")
     print("=" * 60)
     
     # Species to analyze
