@@ -5,7 +5,7 @@ This script calculates the Structure Factor S(k) for Heisteria concinna
 across 8 census intervals (1982-2015) from the BCI 50-ha plot dataset.
 
 Author: Talha Aksoy
-Repository: https://github.com/[your-username]/bci-spatial-analysis
+Repository: https://github.com/tlhksy/bci-spatial-analysis
 Data Source: ForestGEO (https://doi.org/10.15146/5xcp-0d46)
 """
 
