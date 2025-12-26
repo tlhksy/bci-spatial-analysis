@@ -1,5 +1,6 @@
 """
 Figure 2: Dual-Regime Spatial Analysis of Three BCI Tree Species
+With Bootstrap Confidence Intervals
 
 This script compares the Structure Factor S(k) profiles of three species
 with contrasting ecological strategies:
@@ -49,9 +50,49 @@ def calculate_structure_factor(points, k_values):
     return np.array(s_values)
 
 
-def load_species_data(filepath, species_list, census=8, dbh_min=100):
+def bootstrap_full_profile(points, k_values, n_bootstrap=50):
     """
-    Load and process data for multiple species.
+    Calculate bootstrap confidence interval for full S(k) profile.
+    
+    Parameters
+    ----------
+    points : ndarray
+        Nx2 array of coordinates
+    k_values : ndarray
+        Array of wavenumbers
+    n_bootstrap : int
+        Number of bootstrap samples
+        
+    Returns
+    -------
+    tuple
+        (s_observed, lower_ci, upper_ci)
+    """
+    n = len(points)
+    s_observed = calculate_structure_factor(points, k_values)
+    
+    bootstrap_results = []
+    for i in range(n_bootstrap):
+        indices = np.random.choice(n, size=n, replace=True)
+        resampled_points = points[indices]
+        resampled_points = np.unique(resampled_points, axis=0)
+        
+        if len(resampled_points) < 50:
+            continue
+            
+        s_boot = calculate_structure_factor(resampled_points, k_values)
+        bootstrap_results.append(s_boot)
+    
+    bootstrap_results = np.array(bootstrap_results)
+    lower_ci = np.percentile(bootstrap_results, 2.5, axis=0)
+    upper_ci = np.percentile(bootstrap_results, 97.5, axis=0)
+    
+    return s_observed, lower_ci, upper_ci
+
+
+def load_species_data(filepath, species_list, census=8, dbh_min=100, n_bootstrap=50):
+    """
+    Load and process data for multiple species with bootstrap CI.
     
     Parameters
     ----------
@@ -63,6 +104,8 @@ def load_species_data(filepath, species_list, census=8, dbh_min=100):
         Census number (default: 8 for 2015)
     dbh_min : float
         Minimum DBH in mm
+    n_bootstrap : int
+        Number of bootstrap samples
         
     Returns
     -------
@@ -72,11 +115,13 @@ def load_species_data(filepath, species_list, census=8, dbh_min=100):
     df = pd.read_csv(filepath, sep='\t', low_memory=False)
     
     # Define wavenumber range
-    k_values = np.linspace(0.02, 4.0, 250)
+    k_values = np.linspace(0.02, 4.0, 150)
     
     species_data = {}
     
     for species in species_list:
+        print(f"\nProcessing {species}...")
+        
         # Filter data
         mask = (
             (df['SpeciesName'] == species) &
@@ -90,7 +135,7 @@ def load_species_data(filepath, species_list, census=8, dbh_min=100):
         sub = sub[sub['DBH'] >= dbh_min].dropna(subset=['PX', 'PY'])
         
         if len(sub) < 50:
-            print(f"Warning: {species} has insufficient data (N={len(sub)})")
+            print(f"  Warning: {species} has insufficient data (N={len(sub)})")
             continue
         
         # Extract and clean coordinates
@@ -98,30 +143,34 @@ def load_species_data(filepath, species_list, census=8, dbh_min=100):
         points = np.unique(np.round(points * 2) / 2, axis=0)
         n = len(points)
         
-        # Calculate S(k)
-        s_values = calculate_structure_factor(points, k_values)
+        print(f"  N = {n}, calculating bootstrap CI...")
+        
+        # Calculate S(k) with bootstrap CI
+        s_obs, s_lower, s_upper = bootstrap_full_profile(points, k_values, n_bootstrap)
         
         # Calculate key metrics
-        min_sk = np.min(s_values)
-        low_k_max = np.max(s_values[:50])  # k < ~0.5 region
+        min_sk = np.min(s_obs)
+        low_k_max = np.max(s_obs[:50])  # k < ~0.5 region
         
         species_data[species] = {
             'n': n,
             'points': points,
-            's_values': s_values,
+            's_values': s_obs,
+            's_lower': s_lower,
+            's_upper': s_upper,
             'k_values': k_values,
             'min_sk': min_sk,
             'low_k_max': low_k_max
         }
         
-        print(f"{species:15s}: N={n:3d} | Min S(k)={min_sk:.4f} | Low-k Max={low_k_max:.2f}")
+        print(f"  Min S(k)={min_sk:.4f} | Low-k Max={low_k_max:.2f}")
     
     return species_data
 
 
 def plot_dual_regime(species_data, output_path='fig2_dual_regime.png'):
     """
-    Create Figure 2: Dual-regime comparison plot.
+    Create Figure 2: Dual-regime comparison plot with bootstrap CI.
     
     Parameters
     ----------
@@ -138,19 +187,19 @@ def plot_dual_regime(species_data, output_path='fig2_dual_regime.png'):
             'color': 'blue', 
             'ls': '-', 
             'lw': 2.5,
-            'label': f'H. concinna (N={species_data["concinna"]["n"]}, Liquid-like)'
+            'label': 'H. concinna'
         },
         'sebifera': {
             'color': 'gray', 
             'ls': '--', 
             'lw': 2.0,
-            'label': f'G. sebifera (N={species_data["sebifera"]["n"]}, Random-like)'
+            'label': 'G. sebifera'
         },
         'superba': {
             'color': 'red', 
             'ls': '-.', 
             'lw': 2.5,
-            'label': f'G. superba (N={species_data["superba"]["n"]}, Clustered)'
+            'label': 'G. superba'
         }
     }
     
@@ -158,21 +207,32 @@ def plot_dual_regime(species_data, output_path='fig2_dual_regime.png'):
     for sp, data in species_data.items():
         if sp not in styles:
             continue
-            
+        
         k_vals = data['k_values']
         s_vals = data['s_values']
+        s_lower = data['s_lower']
+        s_upper = data['s_upper']
+        n = data['n']
         
+        label = f"{styles[sp]['label']} (N={n})"
+        
+        # Panel A with CI band
+        ax1.fill_between(k_vals, s_lower, s_upper,
+                         alpha=0.2, color=styles[sp]['color'])
         ax1.plot(k_vals, s_vals, 
                  color=styles[sp]['color'],
                  linestyle=styles[sp]['ls'], 
                  linewidth=styles[sp]['lw'],
-                 label=styles[sp]['label'])
+                 label=label)
         
+        # Panel B with CI band
+        ax2.fill_between(k_vals, s_lower, s_upper,
+                         alpha=0.2, color=styles[sp]['color'])
         ax2.plot(k_vals, s_vals, 
                  color=styles[sp]['color'],
                  linestyle=styles[sp]['ls'], 
                  linewidth=styles[sp]['lw'],
-                 label=styles[sp]['label'])
+                 label=label)
     
     # =========================================================================
     # Panel A: Large-Scale Ecological Domain (Log Scale)
@@ -180,18 +240,19 @@ def plot_dual_regime(species_data, output_path='fig2_dual_regime.png'):
     ax1.axhline(1.0, color='black', linewidth=1, linestyle='-', alpha=0.7)
     ax1.set_xlim(0, 1.0)
     ax1.set_yscale('log')
-    ax1.set_ylim(0.5, 200)
+    ax1.set_ylim(0.5, 500)
     ax1.set_xlabel('Wavevector k (m⁻¹)', fontsize=12)
     ax1.set_ylabel('S(k) [Log Scale]', fontsize=12)
-    ax1.set_title('(a) Large-Scale Strategy (k < 1.0)\nEcological Domain (Habitat Filtering)', 
-                  fontsize=11)
+    ax1.set_title('(a) Large-Scale Ecological Domain (k < 1.0)\n'
+                  'with 95% Bootstrap CI', fontsize=11)
     ax1.legend(loc='upper right', fontsize=9)
     ax1.grid(True, which='both', alpha=0.3)
     
     # Annotation for extreme clustering
-    ax1.annotate('Extreme\nClustering', xy=(0.05, 97), xytext=(0.3, 80),
-                 fontsize=9, color='red',
-                 arrowprops=dict(arrowstyle='->', color='red', lw=1.5))
+    if 'superba' in species_data:
+        ax1.annotate('Extreme\nClustering', xy=(0.05, 150), xytext=(0.3, 100),
+                     fontsize=9, color='red',
+                     arrowprops=dict(arrowstyle='->', color='red', lw=1.5))
     
     # =========================================================================
     # Panel B: Short-Range Physical Domain (Linear Scale)
@@ -202,8 +263,8 @@ def plot_dual_regime(species_data, output_path='fig2_dual_regime.png'):
     ax2.set_ylim(0, 2.0)
     ax2.set_xlabel('Wavevector k (m⁻¹)', fontsize=12)
     ax2.set_ylabel('S(k) [Linear Scale]', fontsize=12)
-    ax2.set_title('(b) Short-Range Interaction (k > 0.5)\nPhysical Domain (Repulsion)', 
-                  fontsize=11)
+    ax2.set_title('(b) Short-Range Physical Domain (k > 0.5)\n'
+                  'with 95% Bootstrap CI', fontsize=11)
     ax2.legend(loc='upper right', fontsize=9)
     ax2.grid(True, alpha=0.3)
     
@@ -267,7 +328,7 @@ if __name__ == "__main__":
     if DATA_FILE is None:
         print("ERROR: Data file not found!")
         print("\nPlease ensure one of these files is in the current directory:")
-        print("  1. BCI_3species.tsv (filtered, ~3 MB)")
+        print("  1. BCI_3species.tsv (filtered, ~4 MB)")
         print("  2. FullMeasurementBCI.tsv (full dataset, ~300 MB)")
         print("\nDownload from: https://doi.org/10.15146/5xcp-0d46")
         print("Or get filtered data from: https://github.com/tlhksy/bci-spatial-analysis")
@@ -281,8 +342,8 @@ if __name__ == "__main__":
     # Species to analyze
     SPECIES_LIST = ['concinna', 'sebifera', 'superba']
     
-    # Load and analyze data
-    species_data = load_species_data(DATA_FILE, SPECIES_LIST, census=8)
+    # Load and analyze data with bootstrap
+    species_data = load_species_data(DATA_FILE, SPECIES_LIST, census=8, n_bootstrap=50)
     
     # Create figure
     plot_dual_regime(species_data, 'fig2_dual_regime.png')
