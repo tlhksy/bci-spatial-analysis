@@ -1,5 +1,6 @@
 """
 Figure 1: Temporal Evolution of Spatial Order in H. concinna (1982-2015)
+With Bootstrap Confidence Intervals
 
 This script calculates the Structure Factor S(k) for Heisteria concinna
 across 8 census intervals (1982-2015) from the BCI 50-ha plot dataset.
@@ -54,6 +55,55 @@ def calculate_structure_factor(points, k_values):
     return np.array(s_values)
 
 
+def bootstrap_min_sk(points, k_values, n_bootstrap=100):
+    """
+    Calculate bootstrap confidence interval for minimum S(k).
+    
+    Parameters
+    ----------
+    points : ndarray
+        Nx2 array of coordinates
+    k_values : ndarray
+        Array of wavenumbers
+    n_bootstrap : int
+        Number of bootstrap samples
+        
+    Returns
+    -------
+    tuple
+        (observed_min_sk, lower_ci, upper_ci)
+    """
+    n = len(points)
+    
+    # Observed S(k) and its minimum
+    s_observed = calculate_structure_factor(points, k_values)
+    min_sk_observed = np.min(s_observed)
+    
+    # Bootstrap resampling for min S(k)
+    min_sk_boots = []
+    for i in range(n_bootstrap):
+        # Resample with replacement
+        indices = np.random.choice(n, size=n, replace=True)
+        resampled_points = points[indices]
+        
+        # Remove duplicate points
+        resampled_points = np.unique(resampled_points, axis=0)
+        
+        if len(resampled_points) < 50:
+            continue
+            
+        s_boot = calculate_structure_factor(resampled_points, k_values)
+        min_sk_boots.append(np.min(s_boot))
+    
+    min_sk_boots = np.array(min_sk_boots)
+    
+    # 95% CI
+    lower_ci = np.percentile(min_sk_boots, 2.5)
+    upper_ci = np.percentile(min_sk_boots, 97.5)
+    
+    return min_sk_observed, lower_ci, upper_ci
+
+
 def load_and_filter_data(filepath, species, census, dbh_min=100):
     """
     Load BCI data and filter for adult individuals of a specific species.
@@ -102,7 +152,7 @@ def load_and_filter_data(filepath, species, census, dbh_min=100):
     return points_clean, len(points_clean)
 
 
-def analyze_temporal_evolution(filepath, species='concinna'):
+def analyze_temporal_evolution(filepath, species='concinna', n_bootstrap=50):
     """
     Analyze the temporal evolution of spatial order across all censuses.
     
@@ -112,6 +162,8 @@ def analyze_temporal_evolution(filepath, species='concinna'):
         Path to the BCI data file
     species : str
         Target species name
+    n_bootstrap : int
+        Number of bootstrap samples for CI
         
     Returns
     -------
@@ -119,8 +171,8 @@ def analyze_temporal_evolution(filepath, species='concinna'):
         List of dictionaries with census results
     """
     # Define wavenumber range
-    # k_min based on plot size (~1000m), k_max for short-range structure
-    k_values = np.linspace(0.02, 4.0, 250)
+    k_values = np.linspace(0.02, 4.0, 150)
+    years = [1982, 1985, 1990, 1995, 2000, 2005, 2010, 2015]
     
     results = []
     
@@ -131,28 +183,27 @@ def analyze_temporal_evolution(filepath, species='concinna'):
             print(f"Census {census}: Insufficient data")
             continue
         
-        # Calculate S(k)
-        s_values = calculate_structure_factor(points, k_values)
-        min_sk = np.min(s_values)
-        min_k = k_values[np.argmin(s_values)]
+        # Calculate S(k) with bootstrap CI
+        min_sk, lower, upper = bootstrap_min_sk(points, k_values, n_bootstrap)
         
         results.append({
             'census': census,
+            'year': years[census-1],
             'n': n,
             'min_sk': min_sk,
-            'min_k': min_k,
-            's_values': s_values,
-            'k_values': k_values
+            'lower_ci': lower,
+            'upper_ci': upper
         })
         
-        print(f"Census {census}: N={n:3d}, Min S(k)={min_sk:.4f} at k={min_k:.2f}")
+        print(f"Census {census} ({years[census-1]}): N={n:3d}, "
+              f"Min S(k)={min_sk:.4f} [{lower:.4f}, {upper:.4f}]")
     
     return results
 
 
 def plot_temporal_evolution(results, output_path='fig1_temporal_evolution.png'):
     """
-    Create Figure 1: Temporal evolution plot.
+    Create Figure 1: Temporal evolution plot with bootstrap CI.
     
     Parameters
     ----------
@@ -166,8 +217,14 @@ def plot_temporal_evolution(results, output_path='fig1_temporal_evolution.png'):
     # Extract data
     census_nums = [r['census'] for r in results]
     min_sks = [r['min_sk'] for r in results]
+    lowers = [r['lower_ci'] for r in results]
+    uppers = [r['upper_ci'] for r in results]
     ns = [r['n'] for r in results]
-    years = [1982, 1985, 1990, 1995, 2000, 2005, 2010, 2015]
+    years = [r['year'] for r in results]
+    
+    # Error bars - ensure non-negative
+    err_lower = [max(0, m - l) for m, l in zip(min_sks, lowers)]
+    err_upper = [max(0, u - m) for m, u in zip(min_sks, uppers)]
     
     # Random baseline (Poisson)
     ax.axhline(1.0, color='red', linestyle='--', linewidth=2, 
@@ -177,21 +234,23 @@ def plot_temporal_evolution(results, output_path='fig1_temporal_evolution.png'):
     ax.axhline(0.85, color='gray', linestyle=':', alpha=0.7, 
                label='S(k)=0.85 Reference')
     
-    # Observed values
-    ax.plot(census_nums, min_sks, 'o-', color='blue', linewidth=2.5, 
-            markersize=12, label='Observed H. concinna', zorder=5)
+    # Observed values with error bars
+    ax.errorbar(census_nums, min_sks, yerr=[err_lower, err_upper],
+                fmt='o-', color='blue', linewidth=2.5, markersize=12,
+                capsize=5, capthick=2, elinewidth=2,
+                label='H. concinna (95% Bootstrap CI)', zorder=5)
     
     # Annotate with sample sizes
-    for c, s, n in zip(census_nums, min_sks, ns):
-        ax.annotate(f'N={n}', (c, s - 0.03), ha='center', fontsize=8, color='blue')
+    for c, s, n, u in zip(census_nums, min_sks, ns, uppers):
+        ax.annotate(f'N={n}', (c, u + 0.03), ha='center', fontsize=8, color='blue')
     
     # Labels and formatting
     ax.set_xlabel('Census Number', fontsize=12)
     ax.set_ylabel('Minimum Structure Factor S(k)', fontsize=12)
-    ax.set_title('Temporal Evolution of Spatial Order in H. concinna (1982-2015)', 
-                 fontsize=13)
+    ax.set_title('Temporal Evolution of Spatial Order in H. concinna (1982-2015)\n'
+                 'with 95% Bootstrap Confidence Intervals', fontsize=13)
     ax.set_xlim(0.5, 8.5)
-    ax.set_ylim(0.55, 1.10)
+    ax.set_ylim(0.45, 1.25)
     ax.set_xticks(census_nums)
     ax.set_xticklabels([f'{c}\n({y})' for c, y in zip(census_nums, years)])
     ax.legend(loc='upper right')
@@ -233,7 +292,7 @@ if __name__ == "__main__":
     if DATA_FILE is None:
         print("ERROR: Data file not found!")
         print("\nPlease ensure one of these files is in the current directory:")
-        print("  1. BCI_3species.tsv (filtered, ~3 MB)")
+        print("  1. BCI_3species.tsv (filtered, ~4 MB)")
         print("  2. FullMeasurementBCI.tsv (full dataset, ~300 MB)")
         print("\nDownload from: https://doi.org/10.15146/5xcp-0d46")
         print("Or get filtered data from: https://github.com/tlhksy/bci-spatial-analysis")
@@ -244,8 +303,8 @@ if __name__ == "__main__":
     print(f"Data file: {DATA_FILE}")
     print("=" * 60)
     
-    # Run analysis
-    results = analyze_temporal_evolution(DATA_FILE, species='concinna')
+    # Run analysis with bootstrap
+    results = analyze_temporal_evolution(DATA_FILE, species='concinna', n_bootstrap=50)
     
     # Create figure
     plot_temporal_evolution(results, 'fig1_temporal_evolution.png')
