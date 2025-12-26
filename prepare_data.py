@@ -1,129 +1,106 @@
 """
-Data Preparation Script: Extract Target Species from Full BCI Dataset
+Data Preparation Script for BCI Spatial Analysis
 
-This script filters the complete BCI measurement file to extract only
-the three focal species used in the analysis:
-- Heisteria concinna
-- Guarea sebifera  
-- Gustavia superba
-
-Run this script first if you downloaded the full dataset from ForestGEO.
+This script filters the full BCI dataset to extract three focal species:
+- Heisteria concinna (Olacaceae) - balanced/liquid-like strategy
+- Guarea sebifera (Meliaceae) - random-like/generalist strategy
+- Gustavia superba (Lecythidaceae) - clustered/habitat specialist
 
 Author: Talha Aksoy
 Repository: https://github.com/tlhksy/bci-spatial-analysis
-Data Source: ForestGEO (https://doi.org/10.15146/5xcp-0d46)
 """
 
 import pandas as pd
 import os
 
 
-def prepare_data(input_file="FullMeasurementBCI.tsv", output_file="BCI_3species.tsv"):
+def prepare_filtered_dataset(input_path, output_path='BCI_3species.tsv'):
     """
-    Filter the full BCI dataset to extract target species.
+    Filter the full BCI dataset to include only three focal species.
     
     Parameters
     ----------
-    input_file : str
-        Path to the full BCI measurement file (FullMeasurementBCI.tsv)
-        Download from: https://datadryad.org/dataset/doi:10.15146/5xcp-0d46
-    output_file : str
+    input_path : str
+        Path to the full BCI dataset (FullMeasurementBCI.tsv)
+    output_path : str
         Path for the filtered output file
         
     Returns
     -------
     pd.DataFrame
-        Filtered dataframe with only target species
+        Filtered dataset
     """
+    print(f"Loading full dataset: {input_path}")
+    df = pd.read_csv(input_path, sep='\t', low_memory=False)
     
-    print("=" * 60)
-    print("BCI Data Preparation")
-    print("=" * 60)
+    print(f"Full dataset: {len(df):,} rows")
     
-    # Check if input file exists
-    if not os.path.exists(input_file):
-        print(f"\n❌ ERROR: Input file not found: {input_file}")
-        print("\nPlease download the BCI dataset from:")
-        print("https://datadryad.org/dataset/doi:10.15146/5xcp-0d46")
-        print("\nDownload 'FullMeasurementBCI.zip' and extract it to this folder.")
-        return None
-    
-    print(f"\n📂 Loading: {input_file}")
-    print("   This may take a moment...")
-    
-    # Load data
-    df = pd.read_csv(input_file, sep='\t', low_memory=False)
-    print(f"   Total records: {len(df):,}")
-    
-    # Target species
+    # Target species (using exact SpeciesName matches)
     target_species = ['concinna', 'sebifera', 'superba']
     
-    print(f"\n🔍 Filtering for target species: {target_species}")
-    
-    # Filter
+    # Filter for target species
     mask = df['SpeciesName'].isin(target_species)
-    filtered = df[mask].copy()
+    df_filtered = df[mask].copy()
     
-    print(f"   Filtered records: {len(filtered):,}")
+    print(f"\nFiltered dataset: {len(df_filtered):,} rows")
     
-    # Show species breakdown
-    print("\n📊 Species breakdown:")
+    # Summary by species
+    print("\nSpecies summary:")
+    print("-" * 50)
     for sp in target_species:
-        count = len(filtered[filtered['SpeciesName'] == sp])
-        print(f"   {sp}: {count:,} records")
+        sp_data = df_filtered[df_filtered['SpeciesName'] == sp]
+        n_total = len(sp_data)
+        n_alive = len(sp_data[sp_data['Status'].str.lower() == 'alive'])
+        print(f"  {sp}: {n_total:,} records ({n_alive:,} alive)")
     
-    # Save
-    print(f"\n💾 Saving to: {output_file}")
-    filtered.to_csv(output_file, sep='\t', index=False)
+    # Save filtered dataset
+    df_filtered.to_csv(output_path, sep='\t', index=False)
+    print(f"\n✅ Saved filtered dataset: {output_path}")
+    print(f"   File size: {os.path.getsize(output_path) / 1e6:.1f} MB")
     
-    # File size
-    size_mb = os.path.getsize(output_file) / (1024 * 1024)
-    print(f"   File size: {size_mb:.1f} MB")
-    
-    print("\n✅ Data preparation complete!")
-    print(f"   You can now run the analysis scripts.")
-    
-    return filtered
+    return df_filtered
 
 
-def verify_data(filepath="BCI_3species.tsv"):
+def verify_dataset(filepath):
     """
-    Verify the prepared data file and show summary statistics.
+    Verify the filtered dataset contents.
     
     Parameters
     ----------
     filepath : str
-        Path to the filtered data file
+        Path to the filtered dataset
     """
-    
-    if not os.path.exists(filepath):
-        print(f"❌ File not found: {filepath}")
-        print("   Run prepare_data() first.")
-        return
-    
-    print("=" * 60)
-    print("Data Verification")
+    print(f"\nVerifying dataset: {filepath}")
     print("=" * 60)
     
     df = pd.read_csv(filepath, sep='\t', low_memory=False)
     
-    print(f"\n📂 File: {filepath}")
-    print(f"   Total records: {len(df):,}")
-    print(f"   Columns: {len(df.columns)}")
+    print(f"Total rows: {len(df):,}")
+    print(f"Columns: {list(df.columns)[:10]}...")
     
-    print("\n📊 Species summary:")
+    # Check species
+    print("\nSpecies in dataset:")
     print(df['SpeciesName'].value_counts())
     
-    print("\n📊 Census 8 adult counts (DBH >= 100mm):")
-    for sp in df['SpeciesName'].unique():
-        sub = df[(df['SpeciesName'] == sp) & 
-                 (df['PlotCensusNumber'] == 8) &
-                 (df['Status'].str.lower() == 'alive')]
-        sub['DBH'] = pd.to_numeric(sub['DBH'], errors='coerce')
-        adults = sub[sub['DBH'] >= 100]
-        print(f"   {sp}: N = {len(adults)}")
+    # Check censuses
+    print("\nCensuses available:")
+    print(sorted(df['PlotCensusNumber'].unique()))
     
-    print("\n✅ Data verification complete!")
+    # Check coordinates
+    print("\nCoordinate ranges:")
+    print(f"  PX: {df['PX'].min():.1f} - {df['PX'].max():.1f} m")
+    print(f"  PY: {df['PY'].min():.1f} - {df['PY'].max():.1f} m")
+    
+    # Check DBH for adults
+    df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
+    adults = df[df['DBH'] >= 100]
+    print(f"\nAdult trees (DBH ≥ 10cm): {len(adults):,}")
+    
+    for sp in df['SpeciesName'].unique():
+        sp_adults = adults[(adults['SpeciesName'] == sp) & 
+                          (adults['Status'].str.lower() == 'alive') &
+                          (adults['PlotCensusNumber'] == 8)]
+        print(f"  {sp} (Census 8): {len(sp_adults)} adults")
 
 
 # =============================================================================
@@ -131,24 +108,24 @@ def verify_data(filepath="BCI_3species.tsv"):
 # =============================================================================
 
 if __name__ == "__main__":
-    import sys
-    
-    # Default files
-    INPUT_FILE = "FullMeasurementBCI.tsv"
+    # Check for full dataset
+    FULL_DATASET = "FullMeasurementBCI.tsv"
     OUTPUT_FILE = "BCI_3species.tsv"
     
-    # Check command line arguments
-    if len(sys.argv) > 1:
-        INPUT_FILE = sys.argv[1]
-    if len(sys.argv) > 2:
-        OUTPUT_FILE = sys.argv[2]
-    
-    # Check if output already exists
-    if os.path.exists(OUTPUT_FILE):
-        print(f"📂 Found existing data file: {OUTPUT_FILE}")
-        verify_data(OUTPUT_FILE)
+    if os.path.exists(FULL_DATASET):
+        # Create filtered dataset from full data
+        prepare_filtered_dataset(FULL_DATASET, OUTPUT_FILE)
+        verify_dataset(OUTPUT_FILE)
+    elif os.path.exists(OUTPUT_FILE):
+        # Just verify existing filtered dataset
+        print("Full dataset not found. Verifying existing filtered dataset...")
+        verify_dataset(OUTPUT_FILE)
     else:
-        # Prepare data
-        prepare_data(INPUT_FILE, OUTPUT_FILE)
-        print("\n" + "-" * 60)
-        verify_data(OUTPUT_FILE)
+        print("ERROR: No data files found!")
+        print("\nTo prepare the filtered dataset:")
+        print("1. Download FullMeasurementBCI.tsv from:")
+        print("   https://doi.org/10.15146/5xcp-0d46")
+        print("2. Place it in this directory")
+        print("3. Run this script again")
+        print("\nAlternatively, use the pre-filtered BCI_3species.tsv from:")
+        print("   https://github.com/tlhksy/bci-spatial-analysis")
