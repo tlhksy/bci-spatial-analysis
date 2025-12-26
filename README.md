@@ -1,178 +1,146 @@
-# Scale-Dependent Spatial Order in Tropical Forests
+# BCI Forest Spatial Analysis
 
-[![DOI](https://img.shields.io/badge/DOI-10.xxxx/xxxxx-blue)](https://doi.org/10.xxxx/xxxxx)
-[![Data](https://img.shields.io/badge/Data-ForestGEO-green)](https://doi.org/10.15146/5xcp-0d46)
-[![Python](https://img.shields.io/badge/Python-3.8+-yellow)](https://www.python.org/)
+**Structure Factor Analysis of Tropical Forest Spatial Patterns**
 
-This repository contains the analysis code and reproducible figures for the manuscript:
+This repository contains Python scripts and data for analyzing spatial patterns in the Barro Colorado Island (BCI) 50-hectare forest dynamics plot using the Structure Factor S(k) from condensed matter physics.
 
-> **Scale-Dependent Spatial Order in a Tropical Forest: A Dual-Regime Framework with Implications for Urban Planting Design**
-> 
-> Talha Aksoy, Department of Landscape Architecture, Kırklareli University, Turkey
+## Publication
 
-## Abstract
+**Scale-Dependent Spatial Order in a Tropical Forest: A Dual-Regime Framework for Urban Planting Design**
 
-We employed the Structure Factor S(k) from condensed matter physics to analyze spatial patterns of three tree species in the Barro Colorado Island (BCI) 50-ha plot. Our analysis reveals a **dual-regime spatial architecture**:
+*Talha Aksoy*  
+Department of Landscape Architecture, Kırklareli University, Turkey
 
-- **Physical Regime (k > 0.5 m⁻¹):** Universal convergence to S(k) ≈ 0.8-1.0 driven by crown/root exclusion
-- **Ecological Regime (k < 0.5 m⁻¹):** Species-specific strategies from extreme clustering to near-randomness
-
-These findings provide quantifiable biomimetic benchmarks for urban forestry planting design.
+Target Journal: Urban Forestry & Urban Greening
 
 ## Key Findings
 
-| Species | N | Strategy | S(k) Profile |
-|---------|---|----------|--------------|
-| *H. concinna* | 312 | Liquid-like (balanced) | Min S(k) ≈ 0.85 |
-| *G. sebifera* | 470 | Random-like (generalist) | S(k) ≈ 1.0 |
-| *G. superba* | 579 | Clustered (specialist) | Low-k S(k) > 100 |
+### The Dual-Regime Hypothesis
 
-## Repository Structure
+We demonstrate that tropical forest spatial structure is fundamentally **scale-dependent**:
+
+| Regime | Scale | Wavenumber | Behavior |
+|--------|-------|------------|----------|
+| **Physical** | < 12 m | k > 0.5 m⁻¹ | Universal S(k) ≈ 0.8-1.0 (crown exclusion) |
+| **Ecological** | > 12 m | k < 0.5 m⁻¹ | Species-specific (clustering to random) |
+
+### Species Comparison (Census 8, 2015)
+
+| Species | N | Min S(k) | Strategy |
+|---------|---|----------|----------|
+| *H. concinna* | 312 | 0.84 | Liquid-like (balanced) |
+| *G. sebifera* | 470 | 0.83 | Random-like (generalist) |
+| *G. superba* | 579 | 0.74 | Clustered (specialist) |
+
+## Repository Contents
 
 ```
 bci-spatial-analysis/
-├── README.md                     # This file
-├── requirements.txt              # Python dependencies
-├── prepare_data.py               # Data preparation script
-├── fig1_temporal_evolution.py    # Figure 1: 40-year temporal analysis
-├── fig2_dual_regime.py           # Figure 2: Three-species comparison
-├── BCI_3species.tsv              # Pre-filtered data (3 species)
-└── figures/
-    ├── fig1_temporal_evolution.png
-    └── fig2_dual_regime.png
+├── README.md
+├── requirements.txt
+├── BCI_3species.tsv          # Filtered dataset (~4 MB)
+├── fig1_temporal_evolution.py # H. concinna 40-year analysis
+├── fig2_dual_regime.py        # Three-species comparison
+└── prepare_data.py            # Data filtering script
 ```
 
-## Installation
+## Quick Start
 
+### 1. Clone Repository
 ```bash
-# Clone repository
 git clone https://github.com/tlhksy/bci-spatial-analysis.git
 cd bci-spatial-analysis
+```
 
-# Install dependencies
+### 2. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-## Requirements
-
-```
-numpy>=1.20.0
-pandas>=1.3.0
-scipy>=1.7.0
-matplotlib>=3.4.0
-```
-
-## Data
-
-### Option 1: Use Pre-filtered Data (Recommended)
-The filtered dataset `BCI_3species.tsv` (4.1 MB) containing only the three focal species is included in this repository. You can start analysis immediately.
-
-### Option 2: Prepare from Full Dataset
-If you want to start from the original data:
-
-1. Download from ForestGEO: [FullMeasurementBCI.zip](https://datadryad.org/dataset/doi:10.15146/5xcp-0d46) (33.7 MB)
-2. Extract `FullMeasurementBCI.tsv` to this folder
-3. Run the preparation script:
-
+### 3. Run Analysis
 ```bash
-python prepare_data.py
-```
-
-This will create `BCI_3species.tsv` with the three target species.
-
-### Data Citation
-> Condit R., Perez, R., Aguilar, S., Lao, S., Foster, R., Hubbell, S.P. (2019). 
-> Complete data from the Barro Colorado 50-ha plot: 423617 trees, 35 years.
-> Dryad. https://doi.org/10.15146/5xcp-0d46
-
-## Usage
-
-### Figure 1: Temporal Evolution
-
-```bash
+# Figure 1: Temporal evolution (1982-2015)
 python fig1_temporal_evolution.py
-```
 
-Analyzes *H. concinna* spatial order across 8 censuses (1982-2015), demonstrating persistent "liquid-like" structure (S(k) ≈ 0.80-0.89).
-
-### Figure 2: Dual-Regime Analysis
-
-```bash
+# Figure 2: Dual-regime comparison
 python fig2_dual_regime.py
 ```
 
-Compares three species with contrasting ecological strategies, revealing scale-dependent divergence in spatial organization.
+## Data Source
+
+The BCI dataset is publicly available from the ForestGEO data portal:
+- **DOI:** https://doi.org/10.15146/5xcp-0d46
+- **Portal:** https://forestgeo.si.edu/
+
+### Included Dataset
+
+`BCI_3species.tsv` contains filtered data for three focal species:
+- *Heisteria concinna* (Olacaceae)
+- *Guarea sebifera* (Meliaceae)  
+- *Gustavia superba* (Lecythidaceae)
 
 ## Methods
 
-### Structure Factor Calculation
+### Structure Factor S(k)
 
-The Structure Factor S(k) for a 2D point pattern is calculated as:
+The radially-averaged Structure Factor for 2D point patterns:
 
-$$S(k) = 1 + \frac{2}{N} \sum_{i < j} J_0(k |\mathbf{r}_i - \mathbf{r}_j|)$$
+$$S(k) = 1 + \frac{2}{N} \sum_{i<j} J_0(k \cdot r_{ij})$$
 
-where:
-- $J_0$ is the zero-order Bessel function of the first kind
-- $|\mathbf{r}_i - \mathbf{r}_j|$ is the Euclidean distance between points
-- $k$ is the wavenumber (spatial frequency)
+Where:
+- $k$ = wavenumber (m⁻¹)
+- $r_{ij}$ = distance between trees $i$ and $j$
+- $J_0$ = zero-order Bessel function
+- $N$ = number of trees
 
 ### Interpretation
 
-| S(k) Value | Interpretation |
-|------------|----------------|
+| S(k) Value | Meaning |
+|------------|---------|
 | S(k) = 1 | Complete Spatial Randomness (Poisson) |
 | S(k) < 1 | Repulsive order ("liquid-like") |
 | S(k) > 1 | Clustering |
-| S(k) → 0 as k → 0 | Hyperuniformity |
 
-## Results
+### Wavenumber to Distance Conversion
 
-### Temporal Stability (Figure 1)
+$$\lambda = \frac{2\pi}{k}$$
 
-*H. concinna* maintains stable "liquid-like" order over 40 years:
-- S(k) range: 0.80 - 0.89
-- Population increase: 245 → 312 (27%)
-- No drift toward "jammed" state
+| k (m⁻¹) | λ (m) | Scale |
+|---------|-------|-------|
+| 0.1 | 62.8 | Landscape |
+| 0.3 | 20.9 | Grove/patch |
+| **0.5** | **12.6** | **Regime boundary** |
+| 1.0 | 6.3 | Inter-tree |
+| 2.0 | 3.1 | Crown zone |
 
-### Dual-Regime Structure (Figure 2)
+### Statistical Testing
 
-**Physical Regime (short-range, k > 0.5 m⁻¹):**
-- All species converge to S(k) ≈ 0.8-1.0
-- Driven by physical exclusion (crowns cannot overlap)
-
-**Ecological Regime (large-scale, k < 0.5 m⁻¹):**
-- *G. superba*: Extreme clustering (S(k) > 100) - habitat specialist
-- *G. sebifera*: Near-random (S(k) ≈ 2-3) - generalist
-- *H. concinna*: Intermediate (S(k) ≈ 5-10) - balanced strategy
+- **Monte Carlo Null Envelope:** 100 CSR simulations for significance testing
+- **Bootstrap Confidence Intervals:** 50 resamples for S(k) uncertainty
 
 ## Applications
 
-### Urban Forestry Design Protocol
+### Biomimetic Urban Planting Design
 
-Based on our findings, we propose:
-
-1. **Enforce minimum exclusion zones:** ~2.0-2.5 m for canopy trees
-2. **Target S(k) ≈ 0.85** at short ranges using algorithmic placement
-3. **Allow large-scale flexibility** depending on design goals
+1. **Enforce minimum exclusion zones:** 2.0-2.5 m for canopy trees
+2. **Target S(k) ≈ 0.85 at short ranges:** Liquid-like order
+3. **Allow large-scale flexibility:** Uniform to clustered arrangements
 
 ## Citation
 
 If you use this code or methodology, please cite.
 
+## Acknowledgments
+
+- BCI forest dynamics plot: ForestGEO network, Smithsonian Tropical Research Institute
+- Data collection: STRI staff and collaborators (1981-2015)
+
 ## License
 
-This code is released under the MIT License. See [LICENSE](LICENSE) for details.
-
-The BCI data is subject to ForestGEO data use policies. Please cite the data source appropriately.
+MIT License
 
 ## Contact
 
-**Talha Aksoy**  
-Department of Landscape Architecture  
-Kırklareli University, Turkey  
-📧 talha.aksoy@klu.edu.tr
-
-## Acknowledgments
-
-- BCI forest dynamics plot data from ForestGEO/STRI
-- AI assistance from Google Gemini and Anthropic Claude for code development and manuscript preparation
+Talha Aksoy  
+talha.aksoy@klu.edu.tr  
+Kırklareli University, Turkey
